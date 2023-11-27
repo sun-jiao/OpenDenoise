@@ -1,10 +1,9 @@
 import sys
 
-from PyQt6.QtCore import Qt
-from PyQt6.QtCore import *
-from PyQt6.QtGui import QPixmap
-from PyQt6.QtWidgets import QApplication, QMainWindow, QLabel, QPushButton, QVBoxLayout, QHBoxLayout, QScrollArea, \
-    QFileDialog, QRadioButton, QCheckBox, QWidget, QSplitter
+from PySide6.QtCore import Qt
+from PySide6.QtCore import *
+from PySide6.QtGui import *
+from PySide6.QtWidgets import *
 
 
 class OpenDenoiseApp(QMainWindow):
@@ -13,8 +12,35 @@ class OpenDenoiseApp(QMainWindow):
 
         self.app_title = "Open Denoise (powered by SCUNet)"
         self.selected_images = []  # List to store selected images
+        self.newly_selected_images = []  # List to store selected images
         self.setAcceptDrops(True)
+        self.create_menu()
         self.init_view()
+
+    def create_menu(self):
+        # 创建菜单栏
+        menubar = self.menuBar()
+
+        # 添加菜单
+        file_menu = menubar.addMenu('File')
+        edit_menu = menubar.addMenu('Edit')
+        view_menu = menubar.addMenu('View')
+        about_menu = menubar.addMenu('About')
+
+        # 添加动作（菜单项）
+        new_action = QAction('New', self)
+        open_action = QAction('Open', self)
+        save_action = QAction('Save', self)
+        exit_action = QAction('Exit', self)
+
+        # 将动作添加到菜单
+        file_menu.addAction(new_action)
+        file_menu.addAction(open_action)
+        file_menu.addAction(save_action)
+        file_menu.addSeparator()  # 添加分隔线
+        file_menu.addAction(exit_action)
+
+        exit_action.triggered.connect(self.close)
 
     def init_view(self):
         # Create widgets
@@ -45,6 +71,11 @@ class OpenDenoiseApp(QMainWindow):
         self.scroll_area.setMinimumWidth(200)  # Set a minimum width for the scroll area
 
         self.image_operation_label = QLabel('Image Operations:')
+
+        # define export-related
+        self.export_original_checkbox = QCheckBox('Export to original directory', self)
+        self.export_original_checkbox.stateChanged.connect(self.handle_export_checkbox)
+
         self.output_directory_button = QPushButton('Select Output Directory', self)
         self.output_directory_button.clicked.connect(self.selectOutputDirectory)
 
@@ -61,6 +92,7 @@ class OpenDenoiseApp(QMainWindow):
         right_layout.addLayout(image_list_button_layout)
         right_layout.addWidget(self.scroll_area)
         right_layout.addWidget(self.image_operation_label)
+        right_layout.addWidget(self.export_original_checkbox)
         right_layout.addWidget(self.output_directory_button)
 
         # Create a layout for GPU and CPU buttons in the same row
@@ -95,19 +127,27 @@ class OpenDenoiseApp(QMainWindow):
 
     def selectImages(self):
         options = QFileDialog.Option.ReadOnly
-        file_names, _ = QFileDialog.getOpenFileNames(self, "Select Images", "",
+        images_folder = QStandardPaths.writableLocation(QStandardPaths.StandardLocation.PicturesLocation)
+        file_names, _ = QFileDialog.getOpenFileNames(self, "Select Images", images_folder,
                                                      "Images (*.png *.jpg *.bmp *.gif *.tif)", options=options)
         if file_names:
-            self.selected_images = file_names
+            self.newly_selected_images = file_names
             self.updateImageList()
 
     def clearImages(self):
         pass
 
+    def handle_export_checkbox(self, state):
+        print(state)
+        print(Qt.CheckState.Checked)
+        # enable or disable select output button
+        self.output_directory_button.setEnabled(state != 2)
+        # self.output_directory_button.setEnabled(state != Qt.CheckState.Checked)  not work, reasons unknown
+
     def updateImageList(self):
         # Display the selected images in the list
         # Create buttons with checkboxes for each image
-        for image in self.selected_images:
+        for image in self.newly_selected_images:
             pixmap = QPixmap(image)
 
             # Crop the center square (assuming the image is larger than 50x50)
@@ -117,11 +157,12 @@ class OpenDenoiseApp(QMainWindow):
             cropped_pixmap = pixmap.copy(left, top, size, size)
 
             # Resize the cropped image to 50x50
-            resized_pixmap = cropped_pixmap.scaled(50, 50, aspectRatioMode=Qt.AspectRatioMode.IgnoreAspectRatio)
+            resized_pixmap = cropped_pixmap.scaled(50, 50, aspectMode=Qt.AspectRatioMode.IgnoreAspectRatio)
 
             button = QPushButton(image.split("/")[-1])  # Use the filename as the button text
             button.setContentsMargins(0, 0, 0, 0)  # Set margins to 0 to remove spacing
             checkbox = QCheckBox()
+            checkbox.setChecked(True)
 
             image_pix = QLabel(self)
             image_pix.setFixedSize(50, 50)
@@ -142,21 +183,29 @@ class OpenDenoiseApp(QMainWindow):
         # Placeholder for processing and saving logic
         # You can replace this with your actual image processing code
         print('Processing and saving images...')
-        print('Selected Images:', self.selected_images)
+        print('Selected Images:', self.newly_selected_images)
 
     def dragEnterEvent(self, event):
         file_names = [file.toLocalFile() for file in event.mimeData().urls()]
 
         if file_names:
-            self.selected_images = file_names
+            self.newly_selected_images = file_names
             self.updateImageList()
             print("Dropped files ==> {}".format(file_names))
 
     def selectOutputDirectory(self):
         options = QFileDialog.Option.ReadOnly
-        output_directory = QFileDialog.getExistingDirectory(self, "Select Output Directory", "", options=options)
+        images_folder = QStandardPaths.writableLocation(QStandardPaths.StandardLocation.PicturesLocation)
+        output_directory = QFileDialog.getExistingDirectory(self, "Select Output Directory", images_folder, options=options)
         if output_directory:
             print("Selected Output Directory:", output_directory)
+
+
+class OpenDenoiseImage:
+    def __init__(self, path):
+        self.path = path
+        self.filename = path.split("/")[-1]
+        self.selected = True
 
 
 if __name__ == "__main__":
