@@ -1,16 +1,20 @@
 import sys
+from functools import partial
 
 from PySide6.QtCore import Qt
 from PySide6.QtCore import *
 from PySide6.QtGui import *
 from PySide6.QtWidgets import *
 
+from sub_windows import AboutWindow, NotImplementedWindow
+from utils import openUrl
+
 
 class OpenDenoiseApp(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        self.app_title = "Open Denoise (powered by SCUNet)"
+        self.app_title = "Open Denoise"
         self.selected_images = []  # List to store selected images
         self.newly_selected_images = []  # List to store selected images
         self.setAcceptDrops(True)
@@ -18,29 +22,39 @@ class OpenDenoiseApp(QMainWindow):
         self.init_view()
 
     def create_menu(self):
-        # 创建菜单栏
+        # create menu
         menubar = self.menuBar()
 
-        # 添加菜单
+        # add menu items
         file_menu = menubar.addMenu('File')
         edit_menu = menubar.addMenu('Edit')
         view_menu = menubar.addMenu('View')
         about_menu = menubar.addMenu('About')
 
-        # 添加动作（菜单项）
-        new_action = QAction('New', self)
-        open_action = QAction('Open', self)
-        save_action = QAction('Save', self)
+        # add actions to file menu
         exit_action = QAction('Exit', self)
+        exit_action.triggered.connect(self.close)
 
-        # 将动作添加到菜单
-        file_menu.addAction(new_action)
-        file_menu.addAction(open_action)
-        file_menu.addAction(save_action)
-        file_menu.addSeparator()  # 添加分隔线
         file_menu.addAction(exit_action)
 
-        exit_action.triggered.connect(self.close)
+        # add actions to edit menu
+        pref_action = QAction('Preferences', self)
+        pref_action.triggered.connect(self.not_implemented)
+
+        edit_menu.addAction(pref_action)
+
+        # add actions to about menu
+        release_action = QAction('Releases', self)
+        release_action.triggered.connect(partial(openUrl, 'https://github.com/sun-jiao/OpenDenoise/releases'))
+        code_action = QAction('Source code', self)
+        code_action.triggered.connect(partial(openUrl, 'https://github.com/sun-jiao/OpenDenoise/tree/master'))
+        about_action = QAction(f'About {self.app_title}', self)
+        about_action.triggered.connect(self.open_about_window)
+
+        about_menu.addAction(release_action)
+        about_menu.addAction(code_action)
+        about_menu.addSeparator()
+        about_menu.addAction(about_action)
 
     def init_view(self):
         # Create widgets
@@ -200,12 +214,21 @@ class OpenDenoiseApp(QMainWindow):
         if output_directory:
             print("Selected Output Directory:", output_directory)
 
+    def not_implemented(self):
+        self.not_implemented_window = NotImplementedWindow()
+        self.not_implemented_window.show()
+
+    def open_about_window(self):
+        self.about_windows = AboutWindow()
+        self.about_windows.show()
+
 
 class OpenDenoiseImage:
     def __init__(self, path):
         self.path = path
         self.filename = path.split("/")[-1]
         self.selected = True
+        self.processed = False
 
 
 if __name__ == "__main__":
