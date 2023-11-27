@@ -17,6 +17,8 @@ class OpenDenoiseApp(QMainWindow):
         self.app_title = "Open Denoise"
         self.selected_images = []  # List to store selected images
         self.newly_selected_images = []  # List to store selected images
+        self.export_to_origin = True
+        self.export_dir = QStandardPaths.StandardLocation.PicturesLocation
         self.setAcceptDrops(True)
         self.create_menu()
         self.init_view()
@@ -28,7 +30,7 @@ class OpenDenoiseApp(QMainWindow):
         # add menu items
         file_menu = menubar.addMenu('File')
         edit_menu = menubar.addMenu('Edit')
-        view_menu = menubar.addMenu('View')
+        # view_menu = menubar.addMenu('View')
         about_menu = menubar.addMenu('About')
 
         # add actions to file menu
@@ -88,6 +90,7 @@ class OpenDenoiseApp(QMainWindow):
 
         # define export-related
         self.export_original_checkbox = QCheckBox('Export to original directory', self)
+        self.export_original_checkbox.setChecked(True)
         self.export_original_checkbox.stateChanged.connect(self.handle_export_checkbox)
 
         self.output_directory_button = QPushButton('Select Output Directory', self)
@@ -152,8 +155,8 @@ class OpenDenoiseApp(QMainWindow):
         pass
 
     def handle_export_checkbox(self, state):
-        print(state)
-        print(Qt.CheckState.Checked)
+        # print(state)
+        # print(Qt.CheckState.Checked)
         # enable or disable select output button
         self.output_directory_button.setEnabled(state != 2)
         # self.output_directory_button.setEnabled(state != Qt.CheckState.Checked)  not work, reasons unknown
